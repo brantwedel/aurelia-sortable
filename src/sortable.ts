@@ -70,6 +70,7 @@ export class Sortable {
   public isDisabled: boolean = false;
   public selector: string = SORTABLE_ITEM_ATTR;
 
+  private scrollElement: Element;
   private scrollListener: Element | Document;
   private removeListener: () => void;
   private downClientPoint: Point = new Point(0, 0);
@@ -86,13 +87,18 @@ export class Sortable {
   constructor(public element: Element, public parentSortable: Sortable, private autoScroll: AutoScroll) {
     this.sortableDepth = utils.getSortableDepth(this);
   }
-
-  public activate() {
-    this.removeListener = oribella.on(Swipe, this.element, this as any);
+  public scrollChanged() {
+    if (this.scrollListener) {
+      this.scrollListener.removeEventListener('scroll', this as any, false);
+    }
     const { scrollElement, scrollListener } = utils.ensureScroll(this.scroll, this.element);
-    this.scroll = scrollElement;
+    this.scrollElement = scrollElement;
     this.scrollListener = scrollListener;
     this.scrollListener.addEventListener('scroll', this as any, false);
+  }
+  public activate() {
+    this.removeListener = oribella.on(Swipe, this.element, this as any);
+    this.scrollChanged();
   }
   public deactivate() {
     this.removeListener();
@@ -109,7 +115,7 @@ export class Sortable {
     this.deactivate();
   }
   private tryScroll(client: Point) {
-    const scrollElement = this.scroll as Element;
+    const scrollElement = this.scrollElement as Element;
     const { scrollLeft, scrollTop, scrollWidth, scrollHeight } = scrollElement;
     const scrollSpeed = this.scrollSpeed;
     const scrollMaxPos = utils.getScrollMaxPos(this.element, this.rootSortableRect, scrollElement, { scrollLeft, scrollTop, scrollWidth, scrollHeight }, this.scrollRect, window);
@@ -150,7 +156,7 @@ export class Sortable {
   }
   private initDragState(client: Point, element: Element, fromVM: SortableItem) {
     this.downClientPoint = client;
-    this.scrollRect = (this.scroll as Element).getBoundingClientRect();
+    this.scrollRect = (this.scrollElement as Element).getBoundingClientRect();
     this.rootSortable = utils.getRootSortable(this);
     this.rootSortableRect = this.rootSortable.element.getBoundingClientRect();
     this.childSortables = utils.getChildSortables(this.rootSortable);
@@ -174,7 +180,7 @@ export class Sortable {
     return RETURN_FLAG.REMOVE;
   }
   public start({ data: { pointers: [{ client }] }, target }: DefaultListenerArgs) {
-    utils.addDragClone(this.dragClone, this.element as HTMLElement, this.scroll as Element, target as HTMLElement, this.downClientPoint, this.dragZIndex, this.dragClass, window);
+    utils.addDragClone(this.dragClone, this.element as HTMLElement, this.scrollElement as Element, target as HTMLElement, this.downClientPoint, this.dragZIndex, this.dragClass, window);
     this.target.classList.add(this.sortingClass);
     this.tryScroll(client);
   }
